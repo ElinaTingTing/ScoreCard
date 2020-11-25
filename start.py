@@ -4,32 +4,38 @@ Created on Fri Nov 13 16:51:13 2020
 
 @author: secoo
 """
+import os
 import pickle
 import datetime
 import pandas as pd
-from tkinter import Tk
-from tkinter import Toplevel,LabelFrame,Frame,Label,Button,Entry,INSERT,Menu,W,ttk
+from pandas import DataFrame as df
 import tkinter as tk
 from tkinter import filedialog
 from os.path import exists
 from pandastable import Table
+from tkinter import Tk,Toplevel,LabelFrame,Frame,Label,Entry,INSERT,Menu,E,W,ttk
+from load_node import import_node 
+from inputdata import inputdata
+from split import spliting
 
 
-def Start_UI():
+
+class scorecard():
     def __init__(self):
         self.row = 0
-        self.col = 0
+        self.col = 0  ##目前不清楚是干什么的
         
         self.project_name = None
         self.project_path = None
         self.project_seting = {}
-        self.project_detail = pd.DataFrame(columns=['模块类型', '模块名字', '引用模块', '保存地址', '状态','创建时间'])
+        self.project_detail = df(columns=['模块类型', '模块名字', '引用模块', '保存地址', '状态','创建时间'])
        
         self.root = Tk()
         self.Start_UI()
         self.root.withdraw()
         self.root.mainloop()
     
+
     
     def Start_UI(self):
         self.screenWidth = self.root.winfo_screenwidth()
@@ -39,20 +45,20 @@ def Start_UI():
         x = int((self.screenWidth - winWidth) / 2)
         y = int((self.screenHeight - winHeight) / 2)
         
-        self.start_window_base = Toplevel(self.root)  ##不明白为什么使用toplevel
+        self.start_window_base = Toplevel(self.root)  ##不明白为什么使用toplevel，是否是别的都消失这个也会存在
         self.start_window_base.title('项目')
         self.start_window_base.geometry("%sx%s+%s+%s" % (winWidth, winHeight, x, y))
         
-       
         def selectExcelfold():
             sfname = filedialog.askdirectory()
             self.project_path_E.insert(INSERT, sfname)
+            
         self.start_window = LabelFrame(self.start_window_base, text='创建新项目')
         L1 = Label(self.start_window, text="项目路径")
         L1.grid(row=0,column=0, sticky=(W))
         self.project_path_E = Entry(self.start_window, width=50, bd=1)
         self.project_path_E.grid(row=0,column=1,sticky=(W))
-        button1 = Button(self.start_window, text='浏览', width=8, command=selectExcelfold)
+        button1 = ttk.Button(self.start_window, text='浏览', width=8, command=selectExcelfold)
         button1.grid(row=0,column=2, sticky=(W))
 
         L2 = Label(self.start_window, text="项目名称")
@@ -61,7 +67,7 @@ def Start_UI():
         self.project_name_E = Entry(self.start_window, textvariable=name, bd=1)
         self.project_name_E.grid(row=1,column=1,sticky=(W))
 
-        test_button4 = Button(self.start_window, text='确定',command=self.new_project)
+        test_button4 = ttk.Button(self.start_window, text='确定',command=self.new_project)
         test_button4.grid(row=2,column=1, sticky=(W))
         
         self.start_window.grid(row=0,column=0, columnspan=2, rowspan=3)
@@ -76,15 +82,15 @@ def Start_UI():
         L5.grid(row=4,column=0, sticky=(W))
         self.project_path_Ex = Entry(self.start_window_ex, width=50, bd=1)
         self.project_path_Ex.grid(row=4,column=1, sticky=(W))
-        button1 = Button(self.start_window_ex, text='浏览', width=8, command=selectExcelfile)
+        button1 =ttk.Button(self.start_window_ex, text='浏览', width=8, command=selectExcelfile)
         button1.grid(row=4,column=2,sticky=(W))
 
-        test_button5 = Button(self.start_window_ex, text='导入',command=self.load_project)
+        test_button5 =ttk.Button(self.start_window_ex, text='导入',command=self.load_project)
         test_button5.grid(row=5,column=1, sticky=(W))
         self.start_window_ex.grid()
     
     
-    def new_project(self):
+    def new_project(self,event):
         self.project_name = self.project_name_E.get()
         self.project_path = self.project_path_E.get()+ '/' + '%s.project' % self.project_name
         if exists(self.project_path)==False:
@@ -95,7 +101,7 @@ def Start_UI():
                    '保存地址': self.project_path,
                    '状态': 'Good',
                    '创建时间':datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') }]
-            mm = pd.DataFrame(tt)
+            mm = df(tt)
             self.project_detail = self.project_detail.append(mm)
 
             try:
@@ -103,14 +109,14 @@ def Start_UI():
             except Exception as e:
                 tk.messagebox.showwarning('错误', e)
                 self.start_window_base.destroy()
-                self.root.destroy()
+                self.root.destroy() 
                 self.__init__()  ##出错后重新调用了一遍
             self.start_window_base.destroy()
             self.base_UI()
         else:
             tk.messagebox.showwarning('错误', '在文件夹下有同名项目')
-     
-    
+        
+
     def save_project(self):
         filename = self.project_path
         fw = open(filename, 'wb')
@@ -157,7 +163,7 @@ def Start_UI():
         sysmenu_model = Menu(menubar, tearoff=False)
         
         
-        menubar.add_cascade(label='保存/刷新',sysmenu_save)
+        menubar.add_cascade(label='保存/刷新',menu=sysmenu_save)
         sysmenu_save.add_command(label='保存项目',command=self.save_project)
         sysmenu_save.add_command(label='刷新', command=lambda: self.refresh_df(self.root, self.project_detail))
 
@@ -195,7 +201,7 @@ def Start_UI():
         f.grid(row=1, column=0, rowspan=1,columnspan=5, sticky=(E, W))
         screen_width = f.winfo_screenwidth() * 0.8
         screen_height = f.winfo_screenheight() * 0.8
-        self.table = Table(f, dataframe=project_detail, height=screen_height, width=screen_width)
+        self.table = self.ptm = Table(f, dataframe=project_detail, height=screen_height, width=screen_width)
         ##Table本身为tkinter的class
         self.table.show()
         self.table.grid()
